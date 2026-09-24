@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment (contains secrets — never commit)
+.env
+.env.local
+*.env
+!*.env.example
+
+# Builds & coverage
+dist/
+build/
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads (local fallback)
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

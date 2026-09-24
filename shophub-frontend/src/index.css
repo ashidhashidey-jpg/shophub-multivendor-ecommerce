@@ -1,0 +1,261 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  /* Refined light black-and-white system. "brand" is the single primary ramp,
+     used for text, borders, and primary actions across the whole application. */
+  --color-brand-50: #f7f7f8;
+  --color-brand-100: #ececed;
+  --color-brand-200: #dfdfe2;
+  --color-brand-300: #c8c8cd;
+  --color-brand-400: #a0a0a8;
+  --color-brand-500: #6f6f78;
+  --color-brand-600: #141419;
+  --color-brand-700: #0b0b0f;
+  --color-brand-800: #000000;
+  --color-brand-900: #000000;
+
+  /* Discount / neutral emphasis accent — kept monochrome for restraint. */
+  --color-accent-400: #3a3a42;
+  --color-accent-500: #16161b;
+  --color-accent-600: #000000;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f6f6f7;
+}
+
+/* Base canvas: white with a whisper of grey so cards feel deliberate. */
+body {
+  margin: 0;
+  background: #fcfcfd;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color: #141419;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #141419;
+  color: #ffffff;
+}
+
+/* Consistent, accessible focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Shared page container: comfortable, centered, responsive. */
+.page-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ---- Shared component recipes (keep markup lean & consistent) ---- */
+
+/* Primary black button */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--color-brand-600);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.25rem;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+.btn-primary:hover {
+  background: var(--color-brand-700);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary / outline button */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-brand-200);
+  background: #ffffff;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2b2b31;
+  line-height: 1.25rem;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.btn-secondary:hover {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-300);
+}
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Small buttons for dense list/tables */
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+/* Form primitives — one height, one border, one focus state */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-brand-200);
+  background: #ffffff;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: #141419;
+  line-height: 1.25rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: #9ca3af;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-600);
+  box-shadow: 0 0 0 3px rgba(20, 20, 25, 0.08);
+}
+
+/* Card */
+.card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-brand-200);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 16, 20, 0.04);
+}
+.card-hover {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.card-hover:hover {
+  border-color: var(--color-brand-300);
+  box-shadow: 0 8px 24px rgba(16, 16, 20, 0.06);
+}
+
+/* Page + section headings */
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-brand-800);
+}
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+}
+.section-title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-brand-800);
+}
+.section-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6f6f78;
+}
+
+/* Status pill base (semantic colors continue to be applied via format.jsx) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.1875rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+/* Subtle, purposeful motion — respects reduced-motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+  .fade-in {
+    animation: fadeIn 220ms ease both;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
