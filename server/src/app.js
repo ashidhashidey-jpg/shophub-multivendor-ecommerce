@@ -73,6 +73,8 @@ const allowedOrigins = [
   // Backwards compatibility with the original single-frontend deployment.
   "https://shophub-multivendor-ecommerce.vercel.app",
   "https://shophub-ecom-rho.vercel.app",
+  "https://shophub-seller-coral.vercel.app",
+  "https://shophub-admin-six.vercel.app",
 ].filter(Boolean);
 
 app.use(
