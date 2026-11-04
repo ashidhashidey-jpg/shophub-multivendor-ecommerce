@@ -217,10 +217,7 @@ const updateSellerOrderItemStatus = asyncHandler(async (req, res) => {
     throw new ApiError(403, "This order item does not belong to your store");
   }
 
-  orderService.assertOrderItemLifecycleTransition(item.status, status);
-
-  item.status = status;
-  await order.save();
+  await orderService.updateOrderItemStatus(order, item, status);
 
   sendResponse(res, 200, "Order item status updated", { order });
 });
@@ -254,13 +251,17 @@ const handleSellerReturn = asyncHandler(async (req, res) => {
 
 // GET /api/seller/returns (list of return requests for this seller)
 const getSellerReturns = asyncHandler(async (req, res) => {
+  const { page, limit } = require("../utils/paginate").getPaginationOptions(req);
   const orders = await Order.find({ "items.seller": req.seller._id, "items.status": "RETURN_REQUESTED" })
     .sort({ updatedAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
     .populate("user", "name email");
 
+  const total = await Order.countDocuments({ "items.seller": req.seller._id, "items.status": "RETURN_REQUESTED" });
   const scoped = await orderService.scopeOrdersForSeller(orders, req.seller._id);
 
-  sendResponse(res, 200, "Returns retrieved", { returns: scoped });
+  sendResponse(res, 200, "Returns retrieved", { returns: scoped, pagination: require("../utils/paginate").buildPagination(total, page, limit) });
 });
 
 module.exports = {

@@ -77,11 +77,15 @@ const orderItemSchema = new mongoose.Schema(
     },
     refundId: {
       type: String,
-      trim: true,
-      default: "",
+      default: null,
     },
+    commission: { type: Number, default: 0, min: 0 },
+    sellerPayout: { type: Number, default: 0, min: 0 },
+    settledAt: { type: Date, default: null },
+    settlementEligibleAt: { type: Date, default: null },
+    releasedAt: { type: Date, default: null },
   },
-  { _id: false }
+  { _id: true }
 );
 
 const addressSnapshotSchema = new mongoose.Schema(
@@ -143,6 +147,7 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "PENDING",
     },
+    commissionTotal: { type: Number, default: 0, min: 0 },
     razorpayOrderId: {
       type: String,
       trim: true,

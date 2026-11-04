@@ -58,6 +58,8 @@ const refundOneItem = async (order, item) => {
 
   // Razorpay unconfigured: never fake a refund. Order stays non-refunded.
   if (!paymentService.isPaymentConfigured()) {
+    order.items[idx].refundId = "";
+    await order.save();
     throw new ApiError(
       503,
       "Refund could not be processed because Razorpay is not configured. The order has NOT been marked refunded."
@@ -98,6 +100,7 @@ const refundOneItem = async (order, item) => {
     // Money-safe: revert the claim and persist REFUND_FAILED. The item is
     // intentionally NOT marked refunded, and a retry is allowed later.
     order.items[idx].status = baseStatus;
+    order.items[idx].refundId = "";
     order.paymentStatus = "REFUND_FAILED";
     order.markModified("items");
     await order.save();
@@ -109,7 +112,7 @@ const refundOneItem = async (order, item) => {
 
   order.items[idx].status = "REFUNDED";
   order.items[idx].refundedAt = new Date();
-  order.items[idx].refundId = refund.refundId || "";
+  order.items[idx].refundId = refund.refundId || refund.id || "";
   order.paymentStatus = "REFUNDED";
   order.markModified("items");
   await order.save();
@@ -117,7 +120,7 @@ const refundOneItem = async (order, item) => {
   return {
     productId: String(item.product),
     status: "refunded",
-    refundId: refund.refundId || "",
+    refundId: refund.refundId || refund.id || "",
     amount: amountPaise / 100,
   };
 };

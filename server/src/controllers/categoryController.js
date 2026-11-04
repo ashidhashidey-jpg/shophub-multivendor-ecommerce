@@ -1,5 +1,6 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
+const { uploadBuffer, deleteByUrl, isConfigured } = require("../config/cloudinary");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendResponse } = require("../utils/ApiResponse");
@@ -21,12 +22,20 @@ const getAdminCategories = asyncHandler(async (req, res) => {
 
 // POST /api/admin/categories
 const createCategory = asyncHandler(async (req, res) => {
-  const { name, description, image, isActive } = req.body;
+  const { name, description, isActive } = req.body;
+
+  let imageUrl = "";
+  if (req.file && isConfigured()) {
+    imageUrl = await uploadBuffer(req.file.buffer, {
+      folder: "multivendor/categories",
+      resourceType: req.file.mimetype.startsWith("image") ? "image" : "auto",
+    });
+  }
 
   const category = await Category.create({
     name,
     description,
-    image,
+    image: imageUrl,
     isActive: isActive === undefined ? true : isActive,
   });
 
@@ -40,11 +49,28 @@ const updateCategory = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Category not found");
   }
 
-  const { name, description, image, isActive } = req.body;
+  const { name, description, isActive, removeImage } = req.body;
+
   if (name !== undefined) category.name = name;
   if (description !== undefined) category.description = description;
-  if (image !== undefined) category.image = image;
   if (isActive !== undefined) category.isActive = isActive;
+
+  // Handle image removal
+  if (removeImage === "true" && category.image) {
+    await deleteByUrl(category.image);
+    category.image = "";
+  }
+
+  // Handle image upload/replacement
+  if (req.file && isConfigured()) {
+    if (category.image) {
+      await deleteByUrl(category.image);
+    }
+    category.image = await uploadBuffer(req.file.buffer, {
+      folder: "multivendor/categories",
+      resourceType: req.file.mimetype.startsWith("image") ? "image" : "auto",
+    });
+  }
 
   await category.save();
   sendResponse(res, 200, "Category updated", { category });
@@ -60,6 +86,11 @@ const deleteCategory = asyncHandler(async (req, res) => {
   const productCount = await Product.countDocuments({ category: category._id });
   if (productCount > 0) {
     throw new ApiError(400, `Cannot delete category with ${productCount} product(s). Deactivate it instead.`);
+  }
+
+  // Delete associated image from Cloudinary
+  if (category.image) {
+    await deleteByUrl(category.image);
   }
 
   await category.deleteOne();

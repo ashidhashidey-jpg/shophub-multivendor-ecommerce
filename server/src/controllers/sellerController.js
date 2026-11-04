@@ -1,6 +1,7 @@
 const Seller = require("../models/Seller");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const { uploadBuffer, deleteByUrl, isConfigured } = require("../config/cloudinary");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendResponse } = require("../utils/ApiResponse");
@@ -90,12 +91,29 @@ const updateStore = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Seller profile not found");
   }
 
-  const { storeName, storeDescription, phone, address } = req.body;
+  const { storeName, storeDescription, phone, address, removeImage } = req.body;
 
   if (storeName !== undefined) req.seller.storeName = storeName;
   if (storeDescription !== undefined) req.seller.storeDescription = storeDescription;
   if (phone !== undefined) req.seller.phone = phone;
   if (address !== undefined) req.seller.address = address;
+
+  // Handle store image removal
+  if (removeImage === "true" && req.seller.storeImage) {
+    await deleteByUrl(req.seller.storeImage);
+    req.seller.storeImage = "";
+  }
+
+  // Handle store image upload/replacement
+  if (req.file && isConfigured()) {
+    if (req.seller.storeImage) {
+      await deleteByUrl(req.seller.storeImage);
+    }
+    req.seller.storeImage = await uploadBuffer(req.file.buffer, {
+      folder: "multivendor/shops",
+      resourceType: req.file.mimetype.startsWith("image") ? "image" : "auto",
+    });
+  }
 
   await req.seller.save();
 
@@ -120,9 +138,9 @@ const getDashboard = asyncHandler(async (req, res) => {
       Order.countDocuments({ "items.seller": sellerId, "items.status": "PENDING" }),
       Order.countDocuments({ "items.seller": sellerId, "items.status": "DELIVERED" }),
       Order.aggregate([
-        { $match: { "items.seller": sellerId, "items.status": { $in: ["DELIVERED", "RETURN_REQUESTED", "RETURNED", "REFUNDED", "SHIPPED"] } } },
+        { $match: { "items.seller": sellerId, "items.status": { $in: ["DELIVERED", "RETURN_REQUESTED", "RETURNED", "REFUNDED"] } } },
         { $unwind: "$items" },
-        { $match: { "items.seller": sellerId } },
+        { $match: { "items.seller": sellerId, "items.status": { $in: ["DELIVERED", "RETURN_REQUESTED", "RETURNED", "REFUNDED"] } } },
         {
           $group: {
             _id: null,

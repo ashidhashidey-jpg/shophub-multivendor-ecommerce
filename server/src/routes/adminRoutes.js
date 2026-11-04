@@ -32,10 +32,18 @@ const {
   updateCategory,
   deleteCategory,
 } = require("../controllers/categoryController");
+const {
+  adminGetWithdrawals,
+  adminGetWithdrawal,
+  adminApproveWithdrawal,
+  adminRejectWithdrawal,
+  adminPayWithdrawal,
+} = require("../controllers/withdrawalController");
 const { authenticate } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
 const validate = require("../middleware/validate");
 const { validateObjectIdParam } = require("../validators/orderValidator");
+const { uploadSingle, handleUploadErrors } = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
@@ -67,11 +75,11 @@ router.patch("/products/:id/reject", validateId, validate, rejectProduct);
 router.patch("/products/:id/activate", validateId, validate, activateProduct);
 router.patch("/products/:id/deactivate", validateId, validate, deactivateProduct);
 
-// Categories
+// Categories (admin)
 router.get("/categories", getAdminCategories);
-router.post("/categories", createCategory);
-router.put("/categories/:id", validateId, validate, updateCategory);
-router.delete("/categories/:id", validateId, validate, deleteCategory);
+router.post("/categories", uploadSingle, handleUploadErrors, createCategory);
+router.put("/categories/:id", uploadSingle, handleUploadErrors, updateCategory);
+router.delete("/categories/:id", deleteCategory);
 
 // Orders
 router.get("/orders", getAllOrders);
@@ -82,6 +90,13 @@ router.patch("/orders/:id/return", validateId, validate, handleAdminReturn);
 
 // Returns (admin return management)
 router.get("/returns", getAdminReturns);
+
+// Withdrawals (admin)
+router.get("/withdrawals", adminGetWithdrawals);
+router.get("/withdrawals/:id", adminGetWithdrawal);
+router.patch("/withdrawals/:id/approve", adminApproveWithdrawal);
+router.patch("/withdrawals/:id/reject", adminRejectWithdrawal);
+router.patch("/withdrawals/:id/pay", adminPayWithdrawal);
 
 // Reviews
 router.get("/reviews", getAllReviews);

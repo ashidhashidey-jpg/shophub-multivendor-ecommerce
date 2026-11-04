@@ -2,8 +2,10 @@
 
 A production-style multi-vendor marketplace with three roles — **USER**, **SELLER**, **ADMIN** — built on the MERN stack with role-based authorization enforced on the backend.
 
+The platform ships as **four deployable apps** sharing one Express/MongoDB backend: three React frontends (`user-frontend`, `seller-frontend`, `admin-frontend`) + `server`.
+
 ```
-React Frontend → Axios → Express REST API → MongoDB (Mongoose)
+React Frontend (user / seller / admin) → Axios → Express REST API → MongoDB (Mongoose)
 ```
 
 | Layer | Tech |
@@ -17,7 +19,7 @@ React Frontend → Axios → Express REST API → MongoDB (Mongoose)
 
 ```
 multi-vendor-ecommerce/
-├── server/                 # Express backend
+├── server/                 # Express backend (single shared API)
 │   ├── src/
 │   │   ├── config/         # db, cloudinary, razorpay, uploads
 │   │   ├── controllers/    # auth, user, cart, wishlist, address, order, review,
@@ -32,15 +34,18 @@ multi-vendor-ecommerce/
 │   │   └── validators/     # express-validator validators (register, login, product, order, payment...)
 │   ├── tests/              # auth, userSellers, orders, admin, sellerLifecycle, productManagement, cartAddressCheckout, paymentOrders, orderLifecycle, wishlistReviews, sellerStatusRegister (12 suites / 251 tests)
 │   └── server.js
-├── frontend/               # React SPA
-│   └── src/
-│       ├── api/            # axios client + endpoint map
-│       ├── components/     # Navbar, Footer, MainLayout, common guards/UI
-│       ├── pages/          # public/, user/, seller/, admin/
-│       ├── store/          # Redux slices
-│       └── utils/
+├── user-frontend/          # React SPA — customer shopping storefront (port 5173)
+│   └── src/                # API client, buy-side pages (public + user), shared design system
+├── seller-frontend/        # React SPA — seller portal (port 5174)
+│   └── src/                # API client, seller pages, approved-seller guard
+├── admin-frontend/         # React SPA — admin console (port 5175)
+│   └── src/                # API client, admin pages, ADMIN-role guard
 └── README.md
 ```
+
+> The three frontends are three separate applications that mount the same React Router v7, Redux Toolkit, Tailwind CSS 4 and shared design system (`index.css`). Each one calls the same backend at `VITE_API_BASE_URL`; the backend CORS whitelist accepts all three origins and the `user`-facing origin remains `http://localhost:5173`.
+>
+> Role routing is enforced on the backend (`authorizeRoles` / `requireApprovedSeller` methods → `403` elsewhere). The frontend guards (`RoleRoute`, `ApprovedSellerRoute`, `SessionGate` which re-validates the token against `GET /auth/me`) are a UX layer only — the server remains the source of truth for who can do what. An ADMIN arriving in the seller app, a SELLER arriving in the admin app, etc. is redirected to their own application (via env-provided sibling URLs, never hardcoded).
 
 > Note: the backend folder is named `server/` (equivalent to `backend/` in the assignment's suggested layout). The same professional separation of config/controllers/models/routes/middlewares/services/utils/validators is used.
 
@@ -216,12 +221,26 @@ copy .env.example .env        # fill MONGO_URI + JWT_SECRET (see below)
 npm test                      # 251 tests, all business rules
 npm run dev                   # http://localhost:5000
 
-# Frontend
-cd frontend
+# Customer storefront (USER)
+cd user-frontend
 npm install
 copy .env.example .env        # VITE_API_BASE_URL=http://localhost:5000/api
 npm run build                 # production build
 npm run dev                   # http://localhost:5173
+
+# Seller portal (SELLER)
+cd seller-frontend
+npm install
+copy .env.example .env        # VITE_API_BASE_URL=http://localhost:5000/api
+npm run build
+npm run dev                   # http://localhost:5174
+
+# Admin console (ADMIN)
+cd admin-frontend
+npm install
+copy .env.example .env        # VITE_API_BASE_URL=http://localhost:5000/api
+npm run build
+npm run dev                   # http://localhost:5175
 ```
 
 ### Environment (`server/.env`)
@@ -233,12 +252,20 @@ MONGO_URI=mongodb://localhost:27017/multivendor_ecommerce
 JWT_SECRET=<long random string>
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
+USER_FRONTEND_URL=http://localhost:5173
+SELLER_FRONTEND_URL=http://localhost:5174
+ADMIN_FRONTEND_URL=http://localhost:5175
 CLOUDINARY_CLOUD_NAME=        # optional — enables product/KYC uploads
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 RAZORPAY_KEY_ID=              # optional — enables card/UPI/netbanking gateway
 RAZORPAY_KEY_SECRET=
 ```
+
+Each frontend keeps its own `.env`/`.env.example`:
+- `user-frontend/.env`: `VITE_API_BASE_URL`, `VITE_SELLER_APP_URL=http://localhost:5174`, `VITE_ADMIN_APP_URL=http://localhost:5175`
+- `seller-frontend/.env`: `VITE_API_BASE_URL`, `VITE_USER_APP_URL=http://localhost:5173`, `VITE_ADMIN_APP_URL=http://localhost:5175`
+- `admin-frontend/.env`: `VITE_API_BASE_URL`, `VITE_USER_APP_URL=http://localhost:5173`, `VITE_SELLER_APP_URL=http://localhost:5174`
 
 Image/KYC upload degrades to base64 → local `/uploads/**` storage when Cloudinary is not configured; payment degrades to COD-only with clear messaging. No feature fakes success.
 
@@ -259,7 +286,7 @@ Guarantees:
 - It never drops the database and never deletes or modifies existing users, sellers, products, orders or categories.
 - No demo data and no duplicate admins are created.
 
-After creation, the Admin signs in through the normal `/login` flow and is redirected to the Admin dashboard.
+After creation, the Admin signs in through the normal `/login` flow **on the admin console (`http://localhost:5175`)** and is redirected to the Admin dashboard.
 
 ---
 
@@ -272,7 +299,7 @@ Importables cover: register, login, invalid login, duplicate registration, prote
 ## 9. Verification status
 
 - Backend: **251/251 Jest tests pass** (12 suites, incl. the dedicated `orderLifecycle` suite covering cancellation, return requests, seller/admin return decisions, and the refund state machine with a mocked gateway, plus the `wishlistReviews` suite covering wishlist and purchase-verified reviews, and the `sellerStatusRegister` suite covering the seller status endpoint, structured registration validation, and the exact KYC `documentType` enum) · server boots with no seeding · test DB and smoke DB are disposable (dropped after each run) and the real `multivendor_ecommerce` DB is never seeded.
-- Frontend: **`vite build` passes**, `oxlint` reports 0 errors (only pre-existing style warnings).
+- Frontend (three apps): **`vite build` passes in `user-frontend`, `seller-frontend` and `admin-frontend`**; `oxlint` reports 0 errors across all three (only pre-existing style warnings).
 - All features above are wired to the real backend; no mocked functionality.
 - **Wishlist is wired in the UI**: filled/outline heart toggles on product cards and the product page, a shared server-backed wishlist state, and a wishlist page with loading/error/out-of-stock states; unavailable products are never shown.
 - **Reviews are wired in the UI**: the review form only appears when the server says `canReview: true` (never a misleading form for non-purchasers), review dates and reviewer names are shown, and delivered order items link directly to "Write a review".

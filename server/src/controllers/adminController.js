@@ -396,17 +396,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   if (productId) {
     const item = order.items.find((i) => i.product.toString() === productId);
     if (!item) throw new ApiError(404, "Order item not found");
-    orderService.assertOrderItemLifecycleTransition(item.status, status);
-    item.status = status;
+    await orderService.updateOrderItemStatus(order, item, status);
   } else {
     if (order.items.length === 0) throw new ApiError(400, "Order has no items");
     for (const item of order.items) {
-      orderService.assertOrderItemLifecycleTransition(item.status, status);
-      item.status = status;
+      await orderService.updateOrderItemStatus(order, item, status);
     }
   }
 
-  await order.save();
   sendResponse(res, 200, "Order status updated", { order });
 });
 

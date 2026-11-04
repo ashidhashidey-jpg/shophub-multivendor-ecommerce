@@ -385,7 +385,7 @@ const cancelCheckoutOrders = async (orders) => {
 /**
  * Accept a seller's return approval: mark item RETURNED and restore stock
  * exactly once. The item MUST be in RETURN_REQUESTED; RETURNED is terminal
- * for stock.
+ * for stock. Also reverses settlement if the item was already settled.
  */
 const approveReturn = async (order, item) => {
   if (item.status !== "RETURN_REQUESTED") {
@@ -396,9 +396,7 @@ const approveReturn = async (order, item) => {
   try {
     session.startTransaction();
 
-    item.status = "RETURNED";
-    item.returnedAt = new Date();
-    await order.save({ session });
+    await updateOrderItemStatus(order, item, "RETURNED", session);
 
     await restoreStock([item], session);
 
@@ -412,6 +410,75 @@ const approveReturn = async (order, item) => {
   }
 };
 
+const settlementService = require("./settlementService");
+
+/**
+ * Update an order item's fulfillment status with settlement side effects.
+ * - On DELIVERED + PAID: trigger initial settlement (SALE_CREDIT to pending)
+ * - On RETURNED/CANCELLED from DELIVERED: reverse settlement if already settled
+ * - On DELIVERED from RETURN_REQUESTED (reject return): re-trigger settlement if was reversed
+ */
+const updateOrderItemStatus = async (order, item, nextStatus, session = null) => {
+  const currentStatus = item.status;
+
+  // Fulfillment flow transitions (forward only)
+  const fulfillmentFlowTransitions = [
+    "PENDING",
+    "CONFIRMED",
+    "PROCESSING",
+    "SHIPPED",
+    "DELIVERED",
+  ];
+
+  // Return/cancellation transitions (not part of fulfillment flow)
+  const isFulfillmentTransition = fulfillmentFlowTransitions.includes(currentStatus) && fulfillmentFlowTransitions.includes(nextStatus);
+  const isReturnTransition = currentStatus === "RETURN_REQUESTED" && (nextStatus === "RETURNED" || nextStatus === "DELIVERED");
+  const isCancellationTransition = currentStatus === "DELIVERED" && (nextStatus === "RETURNED" || nextStatus === "CANCELLED");
+
+  if (isFulfillmentTransition) {
+    assertOrderItemLifecycleTransition(currentStatus, nextStatus);
+  } else if (!isReturnTransition && !isCancellationTransition) {
+    throw new ApiError(400, "Invalid status transition");
+  }
+
+  const opts = session ? { session } : {};
+
+  // Update status first so settlement service sees the correct status
+  item.status = nextStatus;
+
+  if (nextStatus === "DELIVERED" && currentStatus !== "DELIVERED") {
+    if (order.paymentStatus === "PAID") {
+      await settlementService.settleDeliveredItem(order, item, session);
+    }
+    item.deliveredAt = new Date();
+  } else if (currentStatus === "DELIVERED" && (nextStatus === "RETURNED" || nextStatus === "CANCELLED")) {
+    if (item.settledAt) {
+      await settlementService.reverseHeldFunds(order, item, session);
+    }
+    if (nextStatus === "RETURNED") {
+      item.returnedAt = new Date();
+    } else {
+      item.cancelledAt = new Date();
+    }
+  } else if (currentStatus === "RETURN_REQUESTED" && (nextStatus === "RETURNED" || nextStatus === "CANCELLED")) {
+    if (item.settledAt) {
+      await settlementService.reverseHeldFunds(order, item, session);
+    }
+    if (nextStatus === "RETURNED") {
+      item.returnedAt = new Date();
+    } else {
+      item.cancelledAt = new Date();
+    }
+  } else if (currentStatus === "RETURN_REQUESTED" && nextStatus === "DELIVERED") {
+    if (order.paymentStatus === "PAID" && !item.settledAt) {
+      await settlementService.settleDeliveredItem(order, item, session);
+    }
+  }
+
+  await order.save(opts);
+  return order;
+};
+
 /**
  * Reject a pending return: the item goes back to DELIVERED and the reason is
  * cleared. Stock must NOT be restored (it was never restored for the request).
@@ -421,10 +488,8 @@ const rejectReturn = async (order, item) => {
     throw new ApiError(400, "Return was not requested for this item");
   }
 
-  item.status = "DELIVERED";
   item.returnReason = "";
-  await order.save();
-  return order;
+  return updateOrderItemStatus(order, item, "DELIVERED");
 };
 
 /**
@@ -519,4 +584,5 @@ module.exports = {
   requestItemReturn,
   scopeOrdersForSeller,
   getCheckoutOrders,
+  updateOrderItemStatus,
 };

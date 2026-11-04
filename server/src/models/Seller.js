@@ -76,6 +76,14 @@ const sellerSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    bankAccount: {
+      accountHolderName: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      ifsc: { type: String, trim: true },
+      bankName: { type: String, trim: true },
+      isVerified: { type: Boolean, default: false },
+    },
+    storeImage: { type: String, default: "" },
   },
   { timestamps: true }
 );

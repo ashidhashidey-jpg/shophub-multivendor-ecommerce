@@ -24,6 +24,7 @@ const {
 } = require("../validators/sellerValidator");
 const { validateObjectIdParam } = require("../validators/orderValidator");
 const validate = require("../middleware/validate");
+const { uploadSingle, handleUploadErrors } = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.put(
 router.use(authenticate, authorizeRoles("SELLER"), loadSeller, requireApprovedSeller);
 
 router.get("/dashboard", getDashboard);
-router.put("/store", validateStoreUpdate, validate, updateStore);
+router.put("/store", uploadSingle, handleUploadErrors, validateStoreUpdate, validate, updateStore);
 
 router.get("/orders", getSellerOrders);
 router.get("/orders/:id", validateObjectIdParam("id"), validate, getSellerOrder);
