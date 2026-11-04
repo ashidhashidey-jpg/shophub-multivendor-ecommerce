@@ -72,6 +72,7 @@ const allowedOrigins = [
   process.env.ADMIN_FRONTEND_URL,
   // Backwards compatibility with the original single-frontend deployment.
   "https://shophub-multivendor-ecommerce.vercel.app",
+  "https://shophub-ecom-rho.vercel.app",
 ].filter(Boolean);
 
 app.use(
