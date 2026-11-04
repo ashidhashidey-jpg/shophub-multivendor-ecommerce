@@ -1,9 +1,23 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+const LOCAL_API_URL = 'http://localhost:5000/api'
+const PRODUCTION_API_URL = 'https://shophub-api-4vp2.onrender.com/api'
+
+const getApiUrl = () => {
+  if (typeof window === 'undefined') return PRODUCTION_API_URL
+
+  const { hostname } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return LOCAL_API_URL
+  }
+
+  return PRODUCTION_API_URL
+}
+
+export const API_URL = getApiUrl()
 
 const client = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
 })
 
